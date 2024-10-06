@@ -29,10 +29,12 @@ def read_file(txt_file):
     return file_data
 
 
-
 def main():
     nlp = spacy.load("pt_core_news_lg")
+    reversed_index = {}
 
+    # Criando base de dados em string.
+    base_data = list()
 
     if len(sys.argv) != 3:
         print("Uso correto: python3 modelo_booleano.py base.txt consulta.txt")
@@ -43,20 +45,16 @@ def main():
 
     # Ler os arquivos e descobrir base de dados.
     base_files = read_file(base_path)
-    print(base_files)
-
-
-    # Criando base de dados em string.
-    base_data = set()
 
     # doc3 = nlp(texto3)
     # sintaxe = [ (t.orth_, t.dep_) for t in doc3 ]
     # print(sintaxe)
+    file_count = 0
 
     for file in base_files:
+        file_count += 1
         file_raw = read_file(file)
         file_raw = str(file_raw)
-        # print(file_raw)
 
         file_info = nlp(file_raw)
         # print(file_info)
@@ -68,17 +66,30 @@ def main():
                 ## Aqui ja deveria formular  o dicionário...
                 ## NECESSÁRIO MONTAR SAIDA DEPOIS DA FORAM --> Palavra: DOC1, QTD.DOC1 DOC2, QTD.DOC2 ...,... ÇÇÇ,ÇÇÇ
                 ## VAMOS CRIAR ENTÃO ESSE INDICE INVERTIDO
-                base_data.add(t)
+
+                # print(t)
+
+                if t not in base_data:
+                    index = {file_count: 1}
+                    # print(index)
+                    reversed_index = {t:index}
+                    # print(reversed_index)
+                    base_data.append(reversed_index)
+
+                # else:
+                #     new_index = base_data[t]
+                #     print(new_index)
+                #     new_index[0] += 1
+                #     base_data[t] = new_index
+                #     # print(new_index)
 
 
 
     print(base_data)
 
     # Consulta Booleana
-    consulta_bool = read_file(consulta_path)
-    print(consulta_bool)
-
-
+    # consulta_bool = read_file(consulta_path)
+    # print(consulta_bool)
 
 
 # Rodar Sistema RI
