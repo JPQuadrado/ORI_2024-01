@@ -11,44 +11,91 @@
 import spacy
 import sys
 
-
-# TESTE INSTALAÇÃO
-
-# texto3 = "O rato roeu a roupa do rei de Roma."
-# doc3 = nlp(texto3)
-# sintaxe = [ (t.orth_, t.dep_) for t in doc3 ]
-# print(sintaxe)
-
-# 1° Definir base de documentos
-# 2° Indexar base de documentos
-# 3° Definir modelo para base de consulta
-
 def read_file(txt_file):
     f = open(txt_file, 'r')
     file_data = [line.strip() for line in f.readlines()]
+    f.close()
     return file_data
+
+
+def alfa_ord(reversed_index):
+    return dict(sorted(reversed_index.items()))
+
+
+def create_index_file(reversed_index, file_name="indice.txt"):
+    with open(file_name, 'w') as f:
+        for word, doc_info in reversed_index.items():
+            str_format = [f"{doc},{count}" for doc, count in doc_info.items()]
+            file_lines = f"{word}: {' '.join(str_format)}\n"
+
+            f.write(file_lines)
+    f.close()
+    return
+
+def bool_query(reversed_index, consult_bool, base_files, output_file="resposta.txt"):
+    f = open(output_file, 'w')
+    try:
+        for query in consult_bool:
+            result_docs = set()
+
+            terms = query.split()
+            if terms:
+                if terms[0].startswith("!"):
+                    first_word = terms[0][1:]  # Remover o operador de negação
+                    result_docs = set(reversed_index.get(first_word, {}).keys())
+                    result_docs = set()
+
+                else:
+                    result_docs = set(reversed_index.get(terms[0], {}).keys())
+
+                for i in range(1, len(terms)):
+                    term = terms[i]
+
+                    if term == "&":
+                        i += 1
+                        if i < len(terms):
+                            next_word = terms[i]
+                            result_docs.intersection_update(reversed_index.get(next_word, {}).keys())
+
+                    elif term == "|":
+                        i += 1
+                        if i < len(terms):
+                            next_word = terms[i]
+                            result_docs.update(reversed_index.get(next_word, {}).keys())
+
+                    elif term.startswith("!"):
+                        next_word = term[1:]
+                        if next_word in reversed_index:
+                            result_docs.difference_update(reversed_index[next_word].keys())
+
+            file_names = [base_files[doc - 1] for doc in sorted(result_docs)]
+
+            f.write(f"{len(result_docs)}\n")
+            for file_name in file_names:
+                f.write(f"{file_name}\n")
+    finally:
+        f.close()
 
 
 def main():
     nlp = spacy.load("pt_core_news_lg")
     reversed_index = {}
 
-    # Criando base de dados em string.
-    base_data = list()
-
     if len(sys.argv) != 3:
         print("Uso correto: python3 modelo_booleano.py base.txt consulta.txt")
         sys.exit(1)
 
+    if sys.argv[1] == "" or sys.argv[2] == "":
+        print("Uso correto: python3 modelo_booleano.py base.txt consulta.txt")
+        sys.exit(1)
+
     base_path = sys.argv[1]
-    consulta_path = sys.argv[2]
+    consult_path = sys.argv[2]
 
-    # Ler os arquivos e descobrir base de dados.
+    # 1 - INDICE INVERTIDO ----------------------------------------------------------------------------------------------------------------------------------------------------------------
     base_files = read_file(base_path)
+    print(base_files)
 
-    # doc3 = nlp(texto3)
-    # sintaxe = [ (t.orth_, t.dep_) for t in doc3 ]
-    # print(sintaxe)
     file_count = 0
 
     for file in base_files:
@@ -61,36 +108,27 @@ def main():
 
         tokens = list(file_info)
 
-        for t in tokens:
-            if not t.is_stop and not t.is_punct:
-                ## Aqui ja deveria formular  o dicionário...
-                ## NECESSÁRIO MONTAR SAIDA DEPOIS DA FORAM --> Palavra: DOC1, QTD.DOC1 DOC2, QTD.DOC2 ...,... ÇÇÇ,ÇÇÇ
-                ## VAMOS CRIAR ENTÃO ESSE INDICE INVERTIDO
+        for token in tokens:
+            if not token.is_stop and not token.is_punct:
+                word = token.text
 
-                # print(t)
+                if word not in reversed_index:
+                    reversed_index[word] = {file_count: 1}
+                else:
 
-                if t not in base_data:
-                    index = {file_count: 1}
-                    # print(index)
-                    reversed_index = {t:index}
-                    # print(reversed_index)
-                    base_data.append(reversed_index)
+                    if file_count in reversed_index[word]:
+                        reversed_index[word][file_count] += 1
+                    else:
+                        reversed_index[word][file_count] = 1
 
-                # else:
-                #     new_index = base_data[t]
-                #     print(new_index)
-                #     new_index[0] += 1
-                #     base_data[t] = new_index
-                #     # print(new_index)
+    # print(reversed_index)
+    reversed_index_ord = alfa_ord(reversed_index)
+    create_index_file(reversed_index_ord)
 
-
-
-    print(base_data)
-
-    # Consulta Booleana
-    # consulta_bool = read_file(consulta_path)
-    # print(consulta_bool)
+    # 2 - CONSULTA BOOLEANA ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+    consult_bool = read_file(consult_path)
+    # print(consult_bool)
+    bool_query(reversed_index_ord, consult_bool, base_files)
 
 
-# Rodar Sistema RI
 main()
